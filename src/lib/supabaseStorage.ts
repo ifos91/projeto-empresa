@@ -105,6 +105,7 @@ export const supabaseStorage = {
       days: record.days as any,
       totalDays: record.total_days,
       totalAdvances: Number(record.total_advances),
+      totalExtras: Number(record.total_extras || 0),
       netTotal: Number(record.net_total),
     }));
   },
@@ -124,6 +125,7 @@ export const supabaseStorage = {
         days: record.days as any,
         total_days: record.totalDays,
         total_advances: record.totalAdvances,
+        total_extras: record.totalExtras || 0,
         net_total: record.netTotal,
       }, {
         onConflict: "employee_id"
@@ -135,6 +137,7 @@ export const supabaseStorage = {
     await logAudit("update", "week_record", record.employeeId, record.employeeName, {
       totalDays: record.totalDays,
       totalAdvances: record.totalAdvances,
+      totalExtras: record.totalExtras,
       netTotal: record.netTotal,
     });
   },
@@ -179,6 +182,7 @@ export const supabaseStorage = {
       days: record.days as any,
       totalDays: record.total_days,
       totalAdvances: Number(record.total_advances),
+      totalExtras: Number(record.total_extras || 0),
       netTotal: Number(record.net_total),
       weekNumber: record.week_number,
       closedAt: record.closed_at,
@@ -196,6 +200,7 @@ export const supabaseStorage = {
       days: record.days as any,
       total_days: record.totalDays,
       total_advances: record.totalAdvances,
+      total_extras: record.totalExtras || 0,
       net_total: record.netTotal,
       week_number: record.weekNumber,
       closed_at: record.closedAt,

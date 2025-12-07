@@ -6,6 +6,7 @@ export interface Employee {
 export interface DailyRecord {
   present: boolean;
   advance: number;
+  extra: number;
 }
 
 export interface WeekRecord {
@@ -22,6 +23,7 @@ export interface WeekRecord {
   };
   totalDays: number;
   totalAdvances: number;
+  totalExtras: number;
   netTotal: number;
 }
 
