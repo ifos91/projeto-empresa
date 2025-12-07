@@ -155,11 +155,12 @@ Acesse o backend em: Lovable Cloud → Database
 ### **Página Principal**
 - ✅ Adicionar funcionário
 - ✅ Marcar presença (checkbox por dia)
-- ✅ Registrar vales (valor por dia)
-- ✅ Cálculo automático de totais
+- ✅ Registrar vales (valor por dia) - **subtrai do total**
+- ✅ Registrar extras (valor por dia) - **soma ao total**
+- ✅ Cálculo automático de totais (Dias × Diária - Vales + Extras)
 - ✅ Fechar semana (move para histórico)
 - ✅ Exportar/Importar dados da semana atual
-- ✅ Gerar PDF
+- ✅ Gerar PDF (inclui vales e extras)
 - ✅ Imprimir relatório
 - ✅ Zerar histórico
 

@@ -20,12 +20,13 @@ export const generateCurrentWeekPDF = (records: WeekRecord[], dailyRate: number)
     record.totalDays.toString(),
     `R$ ${(record.totalDays * dailyRate).toFixed(2)}`,
     `R$ ${record.totalAdvances.toFixed(2)}`,
+    `R$ ${record.totalExtras.toFixed(2)}`,
     `R$ ${record.netTotal.toFixed(2)}`,
   ]);
   
   autoTable(doc, {
     startY: 40,
-    head: [["Funcionário", "Dias Trab.", "Total Diárias", "Total Vales", "Total Líquido"]],
+    head: [["Funcionário", "Dias Trab.", "Total Diárias", "Total Vales", "Total Extras", "Total Líquido"]],
     body: tableData,
     theme: "grid",
     headStyles: { fillColor: [37, 99, 235] },
@@ -51,13 +52,14 @@ export const generateHistoryPDF = (history: HistoryRecord[], dailyRate: number) 
     record.employeeName,
     record.totalDays.toString(),
     `R$ ${record.totalAdvances.toFixed(2)}`,
+    `R$ ${record.totalExtras.toFixed(2)}`,
     `R$ ${record.netTotal.toFixed(2)}`,
     new Date(record.closedAt).toLocaleString("pt-BR"),
   ]);
   
   autoTable(doc, {
     startY: 34,
-    head: [["Semana", "Funcionário", "Dias Trab.", "Total Vales", "Total Líquido", "Fechado em"]],
+    head: [["Semana", "Funcionário", "Dias Trab.", "Total Vales", "Total Extras", "Total Líquido", "Fechado em"]],
     body: tableData,
     theme: "grid",
     headStyles: { fillColor: [37, 99, 235] },

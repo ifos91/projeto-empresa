@@ -77,7 +77,7 @@ const Index = () => {
   };
 
   const createEmptyWeekRecord = (employee: Employee): WeekRecord => {
-    const emptyDay: DailyRecord = { present: false, advance: 0 };
+    const emptyDay: DailyRecord = { present: false, advance: 0, extra: 0 };
     return {
       employeeId: employee.id,
       employeeName: employee.name,
@@ -92,6 +92,7 @@ const Index = () => {
       },
       totalDays: 0,
       totalAdvances: 0,
+      totalExtras: 0,
       netTotal: 0,
     };
   };
@@ -99,9 +100,10 @@ const Index = () => {
   const calculateTotals = (record: WeekRecord): WeekRecord => {
     const totalDays = Object.values(record.days).filter((d) => d.present).length;
     const totalAdvances = Object.values(record.days).reduce((sum, d) => sum + d.advance, 0);
-    const netTotal = totalDays * dailyRate - totalAdvances;
+    const totalExtras = Object.values(record.days).reduce((sum, d) => sum + (d.extra || 0), 0);
+    const netTotal = totalDays * dailyRate - totalAdvances + totalExtras;
 
-    return { ...record, totalDays, totalAdvances, netTotal };
+    return { ...record, totalDays, totalAdvances, totalExtras, netTotal };
   };
 
   const addEmployee = async (name: string) => {
@@ -191,6 +193,35 @@ const Index = () => {
           days: {
             ...record.days,
             [day]: { ...record.days[day as keyof typeof record.days], advance: amount },
+          },
+        };
+        return calculateTotals(updatedRecord);
+      }
+      return record;
+    });
+
+    setCurrentWeek(updatedWeek);
+    
+    const recordToUpdate = updatedWeek.find(r => r.employeeId === employeeId);
+    if (recordToUpdate) {
+      await supabaseStorage.saveWeekRecord(recordToUpdate);
+    }
+  };
+
+  const updateExtra = async (employeeId: string, day: string, amount: number) => {
+    if (!canModify) {
+      toast.error("Ative o modo administrador para modificar dados");
+      setAdminDialogOpen(true);
+      return;
+    }
+    
+    const updatedWeek = currentWeek.map((record) => {
+      if (record.employeeId === employeeId) {
+        const updatedRecord = {
+          ...record,
+          days: {
+            ...record.days,
+            [day]: { ...record.days[day as keyof typeof record.days], extra: amount },
           },
         };
         return calculateTotals(updatedRecord);
@@ -515,6 +546,7 @@ const Index = () => {
               dailyRate={dailyRate}
               onUpdatePresence={updatePresence}
               onUpdateAdvance={updateAdvance}
+              onUpdateExtra={updateExtra}
               onRemoveEmployee={removeEmployee}
             />
           </TabsContent>

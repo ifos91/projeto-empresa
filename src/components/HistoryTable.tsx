@@ -32,6 +32,7 @@ export const HistoryTable = ({ history }: HistoryTableProps) => {
             <TableHead>Funcionário</TableHead>
             <TableHead className="text-center">Dias Trabalhados</TableHead>
             <TableHead className="text-right">Total Vales</TableHead>
+            <TableHead className="text-right">Total Extras</TableHead>
             <TableHead className="text-right">Total Líquido</TableHead>
             <TableHead>Fechado em</TableHead>
           </TableRow>
@@ -45,7 +46,10 @@ export const HistoryTable = ({ history }: HistoryTableProps) => {
               <TableCell className="text-right text-destructive">
                 R$ {record.totalAdvances.toFixed(2)}
               </TableCell>
-              <TableCell className="text-right text-success font-semibold">
+              <TableCell className="text-right text-success">
+                R$ {record.totalExtras.toFixed(2)}
+              </TableCell>
+              <TableCell className="text-right text-primary font-semibold">
                 R$ {record.netTotal.toFixed(2)}
               </TableCell>
               <TableCell className="text-muted-foreground">
@@ -55,7 +59,7 @@ export const HistoryTable = ({ history }: HistoryTableProps) => {
           ))}
           {history.length === 0 && (
             <TableRow>
-              <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
+              <TableCell colSpan={7} className="text-center text-muted-foreground py-8">
                 Nenhum histórico disponível. Feche uma semana para começar.
               </TableCell>
             </TableRow>
