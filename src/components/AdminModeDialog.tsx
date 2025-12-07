@@ -1,6 +1,7 @@
 // =============================================
 // DIÁLOGO DE MODO ADMINISTRADOR
 // Interface para ativar/desativar modo admin
+// SEGURANÇA: Não usa código hardcoded, verifica role no banco
 // =============================================
 
 import { useState } from "react";
@@ -12,17 +13,15 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Label } from "@/components/ui/label";
-import { Shield, ShieldOff } from "lucide-react";
+import { Shield, ShieldOff, ShieldCheck, ShieldAlert } from "lucide-react";
 import { toast } from "sonner";
 
 interface AdminModeDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   isAdminModeActive: boolean;
-  onActivate: (code: string) => Promise<boolean>;
+  onActivate: () => Promise<boolean>;
   onDeactivate: () => void;
 }
 
@@ -33,30 +32,23 @@ export function AdminModeDialog({
   onActivate,
   onDeactivate,
 }: AdminModeDialogProps) {
-  const [code, setCode] = useState("");
   const [loading, setLoading] = useState(false);
 
   const handleActivate = async () => {
-    if (!code.trim()) {
-      toast.error("Digite o código de administrador");
-      return;
-    }
-    
     setLoading(true);
     
     try {
-      const success = await onActivate(code);
+      const success = await onActivate();
       
       if (success) {
         toast.success("Modo administrador ativado!");
-        setCode("");
         onOpenChange(false);
       } else {
-        toast.error("Código inválido!");
+        toast.error("Você não tem permissão de administrador. Contate um admin para receber acesso.");
       }
     } catch (error) {
       console.error("Error activating admin mode:", error);
-      toast.error("Erro ao ativar modo administrador");
+      toast.error("Erro ao verificar permissões de administrador");
     } finally {
       setLoading(false);
     }
@@ -74,7 +66,7 @@ export function AdminModeDialog({
         <DialogContent>
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <Shield className="h-5 w-5 text-green-500" />
+              <ShieldCheck className="h-5 w-5 text-green-500" />
               Modo Administrador Ativo
             </DialogTitle>
             <DialogDescription>
@@ -105,28 +97,24 @@ export function AdminModeDialog({
             Ativar Modo Administrador
           </DialogTitle>
           <DialogDescription>
-            Digite o código de administrador para habilitar modificações.
+            Clique no botão abaixo para verificar se você tem permissão de administrador.
           </DialogDescription>
         </DialogHeader>
-        <div className="space-y-4 py-4">
-          <div className="space-y-2">
-            <Label htmlFor="admin-code">Código de Administrador</Label>
-            <Input
-              id="admin-code"
-              type="password"
-              placeholder="Digite o código"
-              value={code}
-              onChange={(e) => setCode(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && handleActivate()}
-            />
+        <div className="py-4">
+          <div className="flex items-center gap-2 text-sm text-muted-foreground bg-muted p-3 rounded-md">
+            <ShieldAlert className="h-4 w-4 flex-shrink-0" />
+            <span>
+              As permissões de administrador são gerenciadas no banco de dados. 
+              Se você não tem acesso, contate um administrador existente.
+            </span>
           </div>
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             Cancelar
           </Button>
-          <Button onClick={handleActivate} disabled={loading || !code}>
-            {loading ? "Verificando..." : "Ativar"}
+          <Button onClick={handleActivate} disabled={loading}>
+            {loading ? "Verificando..." : "Verificar Permissão"}
           </Button>
         </DialogFooter>
       </DialogContent>

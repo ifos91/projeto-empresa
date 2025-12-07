@@ -1,7 +1,6 @@
 // =============================================
 // PÁGINA DE AUTENTICAÇÃO
 // Gerencia login e cadastro de usuários
-// SEGURANÇA: Cadastro requer código de confirmação "2406"
 // =============================================
 
 import { useState, useEffect } from "react";
@@ -19,8 +18,6 @@ export default function Auth() {
   const [loading, setLoading] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  // Código de confirmação obrigatório para cadastro (2406)
-  const [confirmationCode, setConfirmationCode] = useState("");
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -39,16 +36,8 @@ export default function Auth() {
   }, [navigate]);
 
   // Função para cadastrar novo usuário
-  // VALIDAÇÃO: Verifica código de confirmação antes de criar conta
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    // Verificar código de confirmação (deve ser "2406")
-    if (confirmationCode !== "2406") {
-      toast.error("Código de confirmação inválido! Entre em contato com o administrador.");
-      return;
-    }
-    
     setLoading(true);
 
     const { error } = await supabase.auth.signUp({
@@ -180,20 +169,9 @@ export default function Auth() {
                     minLength={6}
                   />
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="confirmation-code">Código de Confirmação</Label>
-                  <Input
-                    id="confirmation-code"
-                    type="text"
-                    placeholder="Digite o código fornecido"
-                    value={confirmationCode}
-                    onChange={(e) => setConfirmationCode(e.target.value)}
-                    required
-                  />
-                  <p className="text-xs text-muted-foreground">
-                    Entre em contato com o administrador para obter o código
-                  </p>
-                </div>
+                <p className="text-xs text-muted-foreground">
+                  Após criar sua conta, um administrador pode conceder permissões de admin.
+                </p>
                 <Button type="submit" className="w-full" disabled={loading}>
                   {loading ? "Criando conta..." : "Criar Conta"}
                 </Button>

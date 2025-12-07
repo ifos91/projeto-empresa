@@ -32,12 +32,41 @@ Vá em **SQL Editor** e execute o script abaixo de uma vez:
 -- ============================================
 -- SCRIPT COMPLETO DE MIGRAÇÃO
 -- Execute tudo de uma vez
+-- Versão: 2.0 - Com correções de segurança
 -- ============================================
 
 -- 1. Criar enum para roles
 CREATE TYPE public.app_role AS ENUM ('admin', 'user');
 
--- 2. Criar função de verificação de role (SECURITY DEFINER)
+-- 2. Tabela de roles de usuário
+CREATE TABLE public.user_roles (
+  id UUID NOT NULL DEFAULT gen_random_uuid() PRIMARY KEY,
+  user_id UUID NOT NULL,
+  role app_role NOT NULL,
+  UNIQUE(user_id, role)
+);
+
+ALTER TABLE public.user_roles ENABLE ROW LEVEL SECURITY;
+
+-- SEGURANÇA: Usuários só podem ver suas próprias roles
+CREATE POLICY "Users can view their own roles" 
+  ON public.user_roles FOR SELECT 
+  USING (auth.uid() = user_id);
+
+-- SEGURANÇA: Apenas admins podem atribuir roles (não auto-atribuição!)
+-- O primeiro admin deve ser criado manualmente via SQL Editor
+CREATE POLICY "Only admins can insert roles"
+  ON public.user_roles FOR INSERT
+  TO authenticated
+  WITH CHECK (
+    EXISTS (
+      SELECT 1 FROM public.user_roles 
+      WHERE user_id = auth.uid() AND role = 'admin'
+    )
+  );
+
+-- 3. Criar função de verificação de role (SECURITY DEFINER)
+-- Deve ser criada APÓS a tabela user_roles existir
 CREATE OR REPLACE FUNCTION public.has_role(_user_id UUID, _role app_role)
 RETURNS BOOLEAN
 LANGUAGE sql
@@ -53,25 +82,6 @@ AS $$
   )
 $$;
 
--- 3. Tabela de roles de usuário
-CREATE TABLE public.user_roles (
-  id UUID NOT NULL DEFAULT gen_random_uuid() PRIMARY KEY,
-  user_id UUID NOT NULL,
-  role app_role NOT NULL,
-  UNIQUE(user_id, role)
-);
-
-ALTER TABLE public.user_roles ENABLE ROW LEVEL SECURITY;
-
-CREATE POLICY "Users can view their own roles" 
-  ON public.user_roles FOR SELECT 
-  USING (auth.uid() = user_id);
-
-CREATE POLICY "Authenticated users can insert own role"
-  ON public.user_roles FOR INSERT
-  TO authenticated
-  WITH CHECK (auth.uid() = user_id);
-
 -- 4. Tabela de funcionários
 CREATE TABLE public.employees (
   id UUID NOT NULL DEFAULT gen_random_uuid() PRIMARY KEY,
@@ -82,8 +92,9 @@ CREATE TABLE public.employees (
 
 ALTER TABLE public.employees ENABLE ROW LEVEL SECURITY;
 
-CREATE POLICY "Everyone can view all employees" 
+CREATE POLICY "Authenticated users can view employees" 
   ON public.employees FOR SELECT 
+  TO authenticated
   USING (true);
 
 CREATE POLICY "Admins can create employees" 
@@ -101,7 +112,7 @@ CREATE POLICY "Admins can delete employees"
   TO authenticated
   USING (public.has_role(auth.uid(), 'admin'));
 
--- 5. Tabela de registros semanais
+-- 5. Tabela de registros semanais (com total_extras)
 CREATE TABLE public.week_records (
   id UUID NOT NULL DEFAULT gen_random_uuid() PRIMARY KEY,
   user_id UUID NOT NULL,
@@ -110,6 +121,7 @@ CREATE TABLE public.week_records (
   days JSONB NOT NULL,
   total_days INTEGER NOT NULL DEFAULT 0,
   total_advances NUMERIC NOT NULL DEFAULT 0,
+  total_extras NUMERIC NOT NULL DEFAULT 0,
   net_total NUMERIC NOT NULL DEFAULT 0,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT now(),
   UNIQUE(employee_id)
@@ -117,8 +129,9 @@ CREATE TABLE public.week_records (
 
 ALTER TABLE public.week_records ENABLE ROW LEVEL SECURITY;
 
-CREATE POLICY "Everyone can view all week records" 
+CREATE POLICY "Authenticated users can view week records" 
   ON public.week_records FOR SELECT 
+  TO authenticated
   USING (true);
 
 CREATE POLICY "Admins can create week records" 
@@ -136,7 +149,7 @@ CREATE POLICY "Admins can delete week records"
   TO authenticated
   USING (public.has_role(auth.uid(), 'admin'));
 
--- 6. Tabela de histórico
+-- 6. Tabela de histórico (com total_extras)
 CREATE TABLE public.history_records (
   id UUID NOT NULL DEFAULT gen_random_uuid() PRIMARY KEY,
   user_id UUID NOT NULL,
@@ -145,6 +158,7 @@ CREATE TABLE public.history_records (
   days JSONB NOT NULL,
   total_days INTEGER NOT NULL,
   total_advances NUMERIC NOT NULL,
+  total_extras NUMERIC NOT NULL DEFAULT 0,
   net_total NUMERIC NOT NULL,
   week_number INTEGER NOT NULL,
   closed_at TIMESTAMP WITH TIME ZONE NOT NULL,
@@ -153,8 +167,9 @@ CREATE TABLE public.history_records (
 
 ALTER TABLE public.history_records ENABLE ROW LEVEL SECURITY;
 
-CREATE POLICY "Everyone can view all history records" 
+CREATE POLICY "Authenticated users can view history records" 
   ON public.history_records FOR SELECT 
+  TO authenticated
   USING (true);
 
 CREATE POLICY "Admins can create history records" 
@@ -181,8 +196,9 @@ CREATE TABLE public.sales (
 
 ALTER TABLE public.sales ENABLE ROW LEVEL SECURITY;
 
-CREATE POLICY "Everyone can view all sales" 
+CREATE POLICY "Authenticated users can view sales" 
   ON public.sales FOR SELECT 
+  TO authenticated
   USING (true);
 
 CREATE POLICY "Admins can insert sales" 
@@ -215,17 +231,37 @@ CREATE TABLE public.audit_logs (
 
 ALTER TABLE public.audit_logs ENABLE ROW LEVEL SECURITY;
 
-CREATE POLICY "Everyone can view all audit logs" 
+-- SEGURANÇA: Apenas admins podem ver todos os logs
+CREATE POLICY "Admins can view all audit logs" 
   ON public.audit_logs FOR SELECT 
-  USING (true);
+  TO authenticated
+  USING (public.has_role(auth.uid(), 'admin'));
 
-CREATE POLICY "Anyone authenticated can create audit logs" 
+-- Usuários podem ver seus próprios logs
+CREATE POLICY "Users can view own audit logs" 
+  ON public.audit_logs FOR SELECT 
+  TO authenticated
+  USING (auth.uid() = user_id);
+
+CREATE POLICY "Authenticated users can create audit logs" 
   ON public.audit_logs FOR INSERT 
   TO authenticated
   WITH CHECK (auth.uid() = user_id);
 ```
 
-## Passo 4: Configurar Autenticação
+## Passo 4: Criar o Primeiro Administrador
+
+**IMPORTANTE:** Após criar sua conta no sistema, execute este SQL para se tornar admin:
+
+```sql
+-- Substitua 'SEU_EMAIL@EXEMPLO.COM' pelo email que você usou para criar a conta
+INSERT INTO public.user_roles (user_id, role)
+SELECT id, 'admin'::app_role
+FROM auth.users
+WHERE email = 'SEU_EMAIL@EXEMPLO.COM';
+```
+
+## Passo 5: Configurar Autenticação
 
 1. Vá em **Authentication** → **Settings**
 2. Em **Email Auth**:
@@ -233,21 +269,18 @@ CREATE POLICY "Anyone authenticated can create audit logs"
 3. Em **URL Configuration**:
    - **Site URL**: URL do seu app
 
-## Passo 5: Testar
+## Passo 6: Testar
 
 1. Crie uma conta no sistema
-2. Clique no ícone de escudo (🛡️)
-3. Digite `2406` e clique "Ativar"
-4. O escudo deve ficar verde
-5. Agora adicione um funcionário
+2. Execute o SQL do Passo 4 para se tornar admin
+3. O ícone de escudo (🛡️) deve ficar verde automaticamente
+4. Agora adicione um funcionário
 
-## Código Admin
+## Notas de Segurança
 
-**Código de administrador: `2406`**
-
-Use para:
-- Ativar modo admin no sistema
-- Habilitar adição/edição/exclusão de dados
+- **NÃO há código hardcoded** - A verificação de admin é feita no banco de dados
+- **Roles são atribuídas via SQL** - Apenas administradores existentes podem criar novos admins
+- **Logs de auditoria são protegidos** - Cada usuário só vê seus próprios logs (exceto admins)
 
 ## Resumo das Tabelas
 
@@ -255,7 +288,20 @@ Use para:
 |--------|-----------|
 | `user_roles` | Roles de usuários (admin/user) |
 | `employees` | Lista de funcionários |
-| `week_records` | Registros de presença semanais |
+| `week_records` | Registros de presença semanais (com vales e extras) |
 | `history_records` | Histórico de semanas fechadas |
 | `sales` | Registro de vendas |
 | `audit_logs` | Logs de auditoria |
+
+## Estrutura do campo `days` (JSONB)
+
+Cada dia contém:
+```json
+{
+  "seg": { "worked": true, "advance": 0, "extra": 0 },
+  "ter": { "worked": false, "advance": 50, "extra": 0 },
+  "qua": { "worked": true, "advance": 0, "extra": 100 },
+  "qui": { "worked": true, "advance": 0, "extra": 0 },
+  "sex": { "worked": true, "advance": 0, "extra": 0 }
+}
+```
