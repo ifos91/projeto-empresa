@@ -32,7 +32,7 @@ import { useNavigate } from "react-router-dom";
 const Index = () => {
   const navigate = useNavigate();
   const { user, loading, signOut } = useAuth();
-  const { isAdminModeActive, canModify, activateAdminMode, deactivateAdminMode } = useAdminMode();
+  const { isAdminModeActive, activateAdminMode, deactivateAdminMode } = useAdminMode();
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [currentWeek, setCurrentWeek] = useState<WeekRecord[]>([]);
   const [history, setHistory] = useState<HistoryRecord[]>([]);
@@ -107,7 +107,7 @@ const Index = () => {
   };
 
   const addEmployee = async (name: string) => {
-    if (!canModify) {
+    if (!isAdminModeActive) {
       toast.error("Ative o modo administrador para modificar dados");
       setAdminDialogOpen(true);
       return;
@@ -130,7 +130,7 @@ const Index = () => {
   };
 
   const removeEmployee = async (employeeId: string) => {
-    if (!canModify) {
+    if (!isAdminModeActive) {
       toast.error("Ative o modo administrador para modificar dados");
       setAdminDialogOpen(true);
       return;
@@ -151,7 +151,7 @@ const Index = () => {
   };
 
   const updatePresence = async (employeeId: string, day: string, present: boolean) => {
-    if (!canModify) {
+    if (!isAdminModeActive) {
       toast.error("Ative o modo administrador para modificar dados");
       setAdminDialogOpen(true);
       return;
@@ -180,7 +180,7 @@ const Index = () => {
   };
 
   const updateAdvance = async (employeeId: string, day: string, amount: number) => {
-    if (!canModify) {
+    if (!isAdminModeActive) {
       toast.error("Ative o modo administrador para modificar dados");
       setAdminDialogOpen(true);
       return;
@@ -209,7 +209,7 @@ const Index = () => {
   };
 
   const updateExtra = async (employeeId: string, day: string, amount: number) => {
-    if (!canModify) {
+    if (!isAdminModeActive) {
       toast.error("Ative o modo administrador para modificar dados");
       setAdminDialogOpen(true);
       return;
@@ -238,7 +238,7 @@ const Index = () => {
   };
 
   const closeWeek = async () => {
-    if (!canModify) {
+    if (!isAdminModeActive) {
       toast.error("Ative o modo administrador para modificar dados");
       setAdminDialogOpen(true);
       return;
@@ -273,7 +273,7 @@ const Index = () => {
   };
 
   const clearHistory = async () => {
-    if (!canModify) {
+    if (!isAdminModeActive) {
       toast.error("Ative o modo administrador para modificar dados");
       setAdminDialogOpen(true);
       return;
@@ -302,7 +302,7 @@ const Index = () => {
   };
 
   const importCurrentWeek = () => {
-    if (!canModify) {
+    if (!isAdminModeActive) {
       toast.error("Ative o modo administrador para modificar dados");
       setAdminDialogOpen(true);
       return;
@@ -394,7 +394,7 @@ const Index = () => {
     date: string,
     description?: string
   ) => {
-    if (!canModify) {
+    if (!isAdminModeActive) {
       toast.error("Ative o modo administrador para modificar dados");
       setAdminDialogOpen(true);
       return;
@@ -426,7 +426,7 @@ const Index = () => {
   };
 
   const deleteSale = async (id: string) => {
-    if (!canModify) {
+    if (!isAdminModeActive) {
       toast.error("Ative o modo administrador para modificar dados");
       setAdminDialogOpen(true);
       return;
@@ -563,7 +563,7 @@ const Index = () => {
               sales={sales} 
               ranking={salesRanking}
               onDeleteSale={deleteSale}
-              canModify={canModify}
+              canModify={isAdminModeActive}
             />
           </TabsContent>
 

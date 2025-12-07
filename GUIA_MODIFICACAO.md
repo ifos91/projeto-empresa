@@ -2,7 +2,7 @@
 
 ## 🎯 Visão Geral do Sistema
 
-Este sistema de **Controle de Presença e Pagamentos** foi desenvolvido para gerenciar funcionários, registrar presenças diárias, controlar vales e calcular pagamentos líquidos.
+Este sistema de **Controle de Presença e Pagamentos** foi desenvolvido para gerenciar funcionários, registrar presenças diárias, controlar vales, extras e calcular pagamentos líquidos.
 
 ---
 
@@ -10,15 +10,16 @@ Este sistema de **Controle de Presença e Pagamentos** foi desenvolvido para ger
 
 ### **Páginas Principais** (`src/pages/`)
 - **`Index.tsx`** - Página principal com controle de presença e histórico
-- **`Auth.tsx`** - Página de login/cadastro com código de confirmação
+- **`Auth.tsx`** - Página de login/cadastro
 - **`AuditLogs.tsx`** - Página de logs de auditoria (histórico de modificações)
 - **`NotFound.tsx`** - Página 404
 
 ### **Componentes** (`src/components/`)
 - **`AddEmployeeDialog.tsx`** - Diálogo para adicionar funcionário
-- **`AttendanceTable.tsx`** - Tabela de controle semanal
+- **`AttendanceTable.tsx`** - Tabela de controle semanal (com vales e extras)
 - **`HistoryTable.tsx`** - Tabela de histórico de semanas fechadas
 - **`SettingsDialog.tsx`** - Diálogo de configurações (valor da diária)
+- **`AdminModeDialog.tsx`** - Diálogo de verificação de permissão admin
 
 ### **Lógica de Negócio** (`src/lib/`)
 - **`supabaseStorage.ts`** - Funções para interagir com banco de dados + auditoria
@@ -27,25 +28,13 @@ Este sistema de **Controle de Presença e Pagamentos** foi desenvolvido para ger
 
 ### **Hooks** (`src/hooks/`)
 - **`useAuth.tsx`** - Hook de autenticação
+- **`useAdminMode.tsx`** - Hook de verificação de admin (seguro, verifica no banco)
 
 ---
 
 ## 🔧 Como Modificar Funcionalidades
 
-### 1️⃣ **Alterar o Código de Confirmação**
-📁 Arquivo: `src/pages/Auth.tsx` (linha ~37)
-
-```typescript
-// Trocar "2406" pelo novo código
-if (confirmationCode !== "2406") {
-  toast.error("Código de confirmação inválido!");
-  return;
-}
-```
-
----
-
-### 2️⃣ **Alterar Valor Padrão da Diária**
+### 1️⃣ **Alterar Valor Padrão da Diária**
 📁 Arquivo: `src/pages/Index.tsx` (linha ~24)
 
 ```typescript
@@ -55,7 +44,7 @@ const [dailyRate, setDailyRate] = useState(70);
 
 ---
 
-### 3️⃣ **Modificar Dias da Semana**
+### 2️⃣ **Modificar Dias da Semana**
 📁 Arquivo: `src/components/AttendanceTable.tsx` (linha ~16-24)
 
 ```typescript
@@ -72,7 +61,7 @@ const DAYS = [
 
 ---
 
-### 4️⃣ **Alterar Nome do Sistema**
+### 3️⃣ **Alterar Nome do Sistema**
 📁 Arquivos a modificar:
 1. `src/pages/Index.tsx` (linha ~303) - Título principal
 2. `src/pages/Auth.tsx` (linha ~74) - Título da página de login
@@ -87,7 +76,7 @@ const DAYS = [
 
 ---
 
-### 5️⃣ **Adicionar Novos Campos de Auditoria**
+### 4️⃣ **Adicionar Novos Campos de Auditoria**
 📁 Arquivo: `src/lib/supabaseStorage.ts`
 
 A função `logAudit` registra todas as ações. Para adicionar mais informações:
@@ -96,6 +85,7 @@ A função `logAudit` registra todas as ações. Para adicionar mais informaçõ
 await logAudit("update", "week_record", record.employeeId, record.employeeName, {
   totalDays: record.totalDays,
   totalAdvances: record.totalAdvances,
+  totalExtras: record.totalExtras,
   netTotal: record.netTotal,
   // Adicionar novos campos aqui
   novoCampo: "valor",
@@ -104,7 +94,7 @@ await logAudit("update", "week_record", record.employeeId, record.employeeName, 
 
 ---
 
-### 6️⃣ **Modificar Cores e Design**
+### 5️⃣ **Modificar Cores e Design**
 📁 Arquivo: `src/index.css`
 
 Todas as cores usam variáveis HSL:
@@ -122,9 +112,23 @@ Todas as cores usam variáveis HSL:
 
 ## 🔒 Sistema de Segurança
 
-### **Cadastro com Código**
-- Apenas usuários com código "2406" podem criar contas
-- Modificar código em: `src/pages/Auth.tsx`
+### **Modo Administrador**
+O modo admin é verificado diretamente no banco de dados, garantindo segurança.
+
+**Para se tornar admin (primeira vez):**
+Execute este SQL no Supabase SQL Editor:
+
+```sql
+INSERT INTO public.user_roles (user_id, role)
+SELECT id, 'admin'::app_role
+FROM auth.users
+WHERE email = 'SEU_EMAIL@EXEMPLO.COM';
+```
+
+### **Cadastro de Usuários**
+- Qualquer pessoa pode criar uma conta
+- Novas contas são usuários comuns (sem permissão de modificar dados)
+- Apenas admins podem atribuir role de admin a outros usuários
 
 ### **Auditoria Automática**
 - Todas as ações são registradas automaticamente
@@ -132,21 +136,32 @@ Todas as cores usam variáveis HSL:
 - Exportar logs para TXT na página de auditoria
 
 ### **Row Level Security (RLS)**
-- Cada usuário só vê seus próprios dados
-- Configurado automaticamente no banco Supabase
+- Admins podem ver todos os dados
+- Usuários comuns podem apenas visualizar dados
+- Logs de auditoria são protegidos
 
 ---
 
-## 📊 Banco de Dados (Supabase)
+## 📊 Banco de Dados
 
 ### **Tabelas**
-1. **`employees`** - Cadastro de funcionários
-2. **`week_records`** - Registros da semana atual
-3. **`history_records`** - Histórico de semanas fechadas
-4. **`audit_logs`** - Logs de auditoria
+1. **`user_roles`** - Roles de usuários (admin/user)
+2. **`employees`** - Cadastro de funcionários
+3. **`week_records`** - Registros da semana atual (com extras)
+4. **`history_records`** - Histórico de semanas fechadas
+5. **`sales`** - Registro de vendas
+6. **`audit_logs`** - Logs de auditoria
 
-### **Consultar Dados**
-Acesse o backend em: Lovable Cloud → Database
+### **Estrutura do campo `days` (JSONB)**
+```json
+{
+  "seg": { "present": true, "advance": 0, "extra": 0 },
+  "ter": { "present": false, "advance": 50, "extra": 0 },
+  "qua": { "present": true, "advance": 0, "extra": 100 },
+  "qui": { "present": true, "advance": 0, "extra": 0 },
+  "sex": { "present": true, "advance": 0, "extra": 0 }
+}
+```
 
 ---
 
@@ -157,12 +172,17 @@ Acesse o backend em: Lovable Cloud → Database
 - ✅ Marcar presença (checkbox por dia)
 - ✅ Registrar vales (valor por dia) - **subtrai do total**
 - ✅ Registrar extras (valor por dia) - **soma ao total**
-- ✅ Cálculo automático de totais (Dias × Diária - Vales + Extras)
+- ✅ Cálculo automático de totais: `(Dias × Diária) - Vales + Extras`
 - ✅ Fechar semana (move para histórico)
 - ✅ Exportar/Importar dados da semana atual
 - ✅ Gerar PDF (inclui vales e extras)
 - ✅ Imprimir relatório
 - ✅ Zerar histórico
+
+### **Vendas**
+- ✅ Registrar vendas por funcionário
+- ✅ Ranking de vendas
+- ✅ Histórico de vendas
 
 ### **Logs de Auditoria**
 - ✅ Ver histórico completo de modificações
@@ -198,8 +218,8 @@ npm install nome-do-pacote
 3. **Backup automático**: Use Exportar/Importar para backup manual
 
 4. **Segurança**: 
-   - Nunca compartilhe o código de confirmação publicamente
-   - Cada usuário tem acesso apenas aos próprios dados
+   - Permissões de admin são gerenciadas no banco de dados
+   - Não existe código hardcoded para acesso admin
    - Logs de auditoria não podem ser editados
 
 ---
@@ -208,8 +228,13 @@ npm install nome-do-pacote
 
 ### **Funcionário não está sendo adicionado**
 - Verificar se está logado
+- Verificar se tem permissão de administrador (escudo verde)
 - Verificar conexão com internet
 - Conferir console do navegador (F12) para erros
+
+### **Não consigo ativar modo admin**
+- O modo admin é atribuído via SQL no banco de dados
+- Consulte o arquivo `SUPABASE_MIGRATION.md` para o comando SQL
 
 ### **Dados não aparecem**
 - Fazer logout e login novamente
@@ -226,8 +251,7 @@ npm install nome-do-pacote
 
 Para dúvidas ou modificações mais complexas, consulte:
 - Documentação do React: https://react.dev
-- Documentação do Supabase: https://supabase.com/docs
-- Lovable Cloud: Interface visual do backend
+- Arquivo de migração: `SUPABASE_MIGRATION.md`
 
 ---
 
